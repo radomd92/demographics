@@ -3,34 +3,42 @@ import time
 import pickle
 import sys
 import random
+import tempfile
+
+import networkx as nx
+import matplotlib.pyplot as plt
+from networkx.drawing.nx_pydot import graphviz_layout  # Ensure Graphviz is installed
+
 from humans import Man, Woman
 from state import SimulationState
 
-sys.setrecursionlimit(50000)
+sys.setrecursionlimit(5000)
 
 state = SimulationState()
 
 
 def main():
-
     if len(sys.argv) > 1:
         days_to_simulate = int(sys.argv[1]) * 365
     else:
         days_to_simulate = 25000
     birth_giving_ages = []
-    men_population = 61
-    women_population = 67
+    men_population = 95
+    women_population = 132
     men = [Man(c, c) for c in range(100, 100 + men_population)]
     women = [Woman(c, c) for c in range(200, 200 + women_population)]
     families = {}
-    for k in men:
-        families[k.surname + "♂"] = 0
-    for k in women:
-        families[k.mother_name + "♀"] = 0
+    for k in men + women:
+        families[k.surname] = 0
+
+    # for k in men:
+    #     families[k.surname + "♂"] = 0
+    # for k in women:
+    #     families[k.mother_name + "♀"] = 0
 
     population = len(women) + len(men)
     all_ever_lived = men + women
-    while state.current_day < days_to_simulate and 40000 >= population > 10:
+    while state.current_day < days_to_simulate and 0 <= population < 40000:
         women_at_next_iteration = set()
         men_at_next_iteration = set()
 
@@ -85,18 +93,18 @@ def main():
         state.next_day(100)
         women = list(women_at_next_iteration)
         men = list(men_at_next_iteration)
-        print(f"Day {current_day} (year {current_day // 365}) Population: {population}")
+        print(f"Day {state.current_day} (year {state.current_day // 365}) Population: {population}")
         time.sleep(.01)
 
-    kids_total_per_woman = sum([h.kids for h in women]) / len(women)
+    kids_total_per_woman = sum([h.kids for h in women]) / max(1, len(women))
     everybody = men + women
 
     for h in everybody:
         surname = h.surname
-        if isinstance(h, Woman):
-            surname += '♀'
-        else:
-            surname += '♂'
+        # if isinstance(h, Woman):
+        #     surname += '♀'
+        # else:
+        #     surname += '♂'
 
         if surname in families:
             families[surname] += 1
@@ -110,7 +118,7 @@ def main():
         f.write("\n".join([f"{k},{v}" for v, k in families]))
 
     with open('summary.txt', 'w') as f:
-        f.write(f"\nTotal days simulated: {current_day}")
+        f.write(f"\nTotal days simulated: {state.current_day}")
         f.write(f"\nAverage kids per woman: {kids_total_per_woman}")
         f.write(f"\nTotal population: {len(men) + len(women)}")
         f.write(f"\nMedian age men: {np.median([m.age for m in men])}")
@@ -149,7 +157,6 @@ def main():
 
 
 def explore_population():
-    current_day = 0
     all_ever_lived = pickle.load(open("population.pkl", "rb"))
     current_day = max([h.year_of_birth * 365.25 for h in all_ever_lived])
     print("Population explorer")
@@ -175,18 +182,158 @@ def explore_population():
     while name:
         for h in all_ever_lived:
             if name.lower() in h.name.lower():
-                print("===== PERSON =====")
-                print(h)
-                print("===== DESCENDANCE =====")
-                print_person_children(h)
-                print("===== ASCENDANCE =====")
-                print_person_ascendance(h)
+                draw_family_tree(h)
+                # draw_cherry_poppers(h)
+                # print("===== PERSON =====")
+                # print(h)
+                # print("===== DESCENDANCE =====")
+                # print_person_children(h)
+                # print("===== ASCENDANCE =====")
+                # print_person_ascendance(h)
 
         print("====================================")
         print(f"Enter a name to search for a person > ", end="")
         name = input()
 
 
+def draw_cherry_poppers(person: [Man, Woman]):
+    edges = []
+    nodes = []
+    node_colors = []
+    options = {
+        'node_size': 1000,
+        'width': 1,
+        'arrowstyle': '-|>',
+        'arrowsize': 5,
+    }
+
+    def make_label(person: [Man, Woman]):
+        if person is None:
+            return "Unknown"
+        if isinstance(person, Woman):
+            label = f"{person.name}(♀)"
+        else:
+            label = f"{person.name}(♂)"
+
+        label += f"\n({int(person.year_of_birth)} - {int(person.year_of_birth + person.life_expectancy)})" \
+                 f"\nbeauty={person.beauty}"
+
+        return label
+
+    def print_person_vcard_taker(person: [Man, Woman], level=0):
+        if person is None:
+            return
+
+        edge_self_label = make_label(person)
+
+        if person.cherry_popper is not None:
+            edge_popper = make_label(person.cherry_popper)
+            if edge_popper not in nodes:
+                nodes.append(edge_popper)
+                edges.append((edge_popper, edge_self_label))
+                print_person_vcard_taker(person.cherry_popper, level + 1)
+        if person.life_partner is not None:
+            edge_partner = make_label(person.life_partner)
+            if edge_partner not in nodes:
+                nodes.append(edge_partner)
+                edges.append((edge_partner, edge_self_label))
+                print_person_vcard_taker(person.life_partner, level + 1)
+
+    # node_colors.append('green')
+    print_person_vcard_taker(person)
+
+    g = nx.DiGraph()
+
+    g.add_nodes_from(nodes)
+    for edge in edges:
+        g.add_edge(*edge)
+
+    graphviz_settings = """
+        digraph G {
+            ranksep=-1.0;  # Adjust vertical spacing
+            nodesep=1.0;  # Adjust horizontal spacing
+        }
+        """
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".dot") as tmp_dot_file:
+        tmp_dot_file.write(graphviz_settings.encode())
+        tmp_dot_file.close()
+        pos = graphviz_layout(g, prog='dot', root=tmp_dot_file.name)
+
+    nx.draw(g, pos, with_labels=True, node_color=node_colors, **options)
+    plt.draw()
+    plt.show()
+
+
+def draw_family_tree(person: [Man, Woman]):
+    edges = []
+    nodes = []
+    node_colors = []
+    options = {
+        'node_size': 1000,
+        'width': 1,
+        'arrowstyle': '-|>',
+        'arrowsize': 5,
+    }
+
+    def make_label(person: [Man, Woman]):
+        if person is None:
+            return "Unknown"
+        if isinstance(person, Woman):
+            label = f"{person.name}(♀)"
+        else:
+            label = f"{person.name}(♂)"
+
+        label += f"\n({int(person.year_of_birth)} - {int(person.year_of_birth + person.life_expectancy)})" \
+                 f"\nbeauty={person.beauty}"
+
+        return label
+
+    def print_person_parents(person: [Man, Woman], level=0):
+        if person is None:
+            return
+
+        edge_self_label = make_label(person)
+
+        if person.mother is not None:
+            edge_mother_label = make_label(person.mother)
+            edges.append((edge_mother_label, edge_self_label))
+            nodes.append(edge_self_label)
+
+        if person.father is not None:
+            edge_father_label = make_label(person.father)
+            edges.append((edge_father_label, edge_self_label))
+            print_person_parents(person.father, level + 1)
+            if level < 2:
+                print_person_parents(person.mother, level + 1)
+
+    # node_colors.append('green')
+    print_person_parents(person)
+
+    g = nx.DiGraph()
+
+    g.add_nodes_from(nodes)
+    for edge in edges:
+        g.add_edge(*edge)
+
+    graphviz_settings = """
+    digraph G {
+        ranksep=-1.0;  # Adjust vertical spacing
+        nodesep=1.0;  # Adjust horizontal spacing
+    }
+    """
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".dot") as tmp_dot_file:
+        tmp_dot_file.write(graphviz_settings.encode())
+        tmp_dot_file.close()
+        pos = graphviz_layout(g, prog='dot', root=tmp_dot_file.name)
+
+    nx.draw(g, pos, with_labels=True, node_color=node_colors, **options)
+    plt.draw()
+    plt.show()
+
+
 if __name__ == '__main__':
     # main()
     explore_population()
+    # draw_family_tree(None)

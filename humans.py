@@ -16,8 +16,6 @@ def get_syllable():
 class Human(object):
 
     def __init__(self, father_id=1, mother_id=1):
-        global SimulationState
-        ().current_day
         self._id = (father_id, mother_id)
         self.age_cherry_popped = None
         self.beauty = random.randint(0, 100)
@@ -55,9 +53,10 @@ class Human(object):
 
     @property
     def name(self):
-        patronym = ' ' + self.father.given_name if self.father else ''
-        matronym = ' ' + self.mother.given_name if self.mother else ''
-        return f"{self.surname.upper()} {self.given_name}{patronym}{matronym}"
+        # patronym = ' ' + self.father.given_name if self.father else ''
+        # matronym = ' ' + self.mother.given_name if self.mother else ''
+        # return f"{self.surname.upper()} {self.given_name}{patronym}{matronym}"
+        return f"{self.surname.upper()} {self.given_name}"
 
     @property
     def want_to_marry(self):
@@ -94,8 +93,6 @@ class Human(object):
 
     @property
     def age(self):
-        global SimulationState
-        ().current_day
         age = abs(SimulationState().current_day - self.year_of_birth * 365.25) / 365.25
         return float("%.2f" % age)
 
@@ -149,9 +146,11 @@ class Woman(Human):
         self.baby = None
         if father_id in mappings:
             self.surname = mappings[mother_id].upper()
+            # self.surname = mappings[father_id].upper()
         else:
             self.surname = get_syllable().upper()
             mappings[mother_id] = self.surname
+            # mappings[father_id] = self.surname
 
     def __repr__(self):
         k = super().__repr__()

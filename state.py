@@ -1,16 +1,15 @@
-class Singleton(type):
-    def __init__(cls, name, bases, dict):
-        super(Singleton, cls).__init__(name, bases, dict)
-        cls.instance = None
+class SingletonMeta(type):
+    _instances = {}
 
-    def __new__(type, name, bases, dict):
-        if type.instance is None:
-            type.instance = super(Singleton, type).__new__(type, name, bases, dict)
-        return type.instance
+    def __call__(cls, *args, **kwargs):
+        # If an instance of this class does not exist, create it
+        if cls not in cls._instances:
+            instance = super().__call__(*args, **kwargs)
+            cls._instances[cls] = instance
+        return cls._instances[cls]
 
 
-class SimulationState(object):
-    __metaclass__ = Singleton
+class SimulationState(metaclass=SingletonMeta):
 
     def __init__(self):
         self.current_day = 0
