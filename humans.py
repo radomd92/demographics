@@ -1,9 +1,14 @@
 import numpy as np
 import math
 import random
+import sys
+from uuid import uuid4
 from state import SimulationState
 
 mappings = {}
+
+print(sys.getrecursionlimit())
+sys.setrecursionlimit(10000)
 
 
 def get_syllable():
@@ -16,10 +21,11 @@ def get_syllable():
 class Human(object):
 
     def __init__(self, father_id=1, mother_id=1):
+        self.uuid = str(uuid4())
         self._id = (father_id, mother_id)
         self.age_cherry_popped = None
         self.beauty = random.randint(0, 100)
-        self.beauty_standard = 50
+        self.beauty_standard = random.gauss(50, 10)
         self.cherry_popper = None
         self.father = None
         self.generation = (0, 0)
@@ -62,6 +68,38 @@ class Human(object):
     def want_to_marry(self):
         return self.age > self.marriage_age \
             and (self.life_partner is None or self.life_partner.is_dead)
+
+    def as_dict(self, skip=[]):
+        d = {
+            'uuid': self.uuid,
+            'id': self._id,
+            'name': self.name,
+            'genes': self.genes.tolist(),
+            'given_name': self.given_name,
+            'surname': self.surname,
+            'age': self.age,
+            'generation': self.generation,
+            'beauty': self.beauty,
+            'beauty_standard': self.beauty_standard,
+            'life_expectancy': self.life_expectancy,
+            'life_partner': self.life_partner._id if self.life_partner else None,
+            'father_id': self.father._id if self.father else None,
+            'mother_id': self.mother._id if self.mother else None,
+            'kids': self.kids,
+            'sex_XP': self.sex_XP,
+            'age_cherry_popped': self.age_cherry_popped,
+            'year_of_birth': self.year_of_birth,
+            'sexual_partners': list(self.sexual_partners.keys()),
+        }
+
+        if 'partner' not in skip:
+            d['partner'] = self.life_partner.as_dict(skip=['partner']) if self.life_partner else None
+
+        if 'cherry_popper' not in skip:
+            d['cherry_popper'] = self.cherry_popper.as_dict(skip=['cherry_popper']) if self.cherry_popper else None
+
+        return d
+
 
     def __repr__(self):
         if self.father is not None:
@@ -141,6 +179,7 @@ class Woman(Human):
         super().__init__(father_id, mother_id)
         self.conception = None
         self.gestation_period = 9 * 30
+        self.beauty_standard = random.gauss(90, 5)
         self.menarche = random.randint(800, 1300) / 100
         self.menonpause = random.randint(3300, 4500) / 100
         self.baby = None
@@ -231,16 +270,16 @@ class Woman(Human):
 
         # incest is a strong taboo
         if man._id[0] in self._id:
-            modifier -= 50
+            modifier -= 100
         if man._id[1] in self._id:
-            modifier -= 50
+            modifier -= 100
 
         # if modifier == -100:
         #     print("Incest is a strong taboo!")
 
         if man.beauty < self.beauty_standard:
             # woman is picky. less chance, but can still happen
-            modifier -= 30
+            modifier -= 60
 
         if self.beauty < man.beauty_standard:
             # man is less picky ;)

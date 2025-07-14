@@ -12,7 +12,7 @@ from networkx.drawing.nx_pydot import graphviz_layout  # Ensure Graphviz is inst
 from humans import Man, Woman
 from state import SimulationState
 
-sys.setrecursionlimit(5000)
+sys.setrecursionlimit(1000000000)
 
 state = SimulationState()
 
@@ -21,7 +21,7 @@ def main():
     if len(sys.argv) > 1:
         days_to_simulate = int(sys.argv[1]) * 365
     else:
-        days_to_simulate = 25000
+        days_to_simulate = 100000
     birth_giving_ages = []
     men_population = 95
     women_population = 132
@@ -37,7 +37,7 @@ def main():
     #     families[k.mother_name + "♀"] = 0
 
     population = len(women) + len(men)
-    all_ever_lived = men + women
+    all_ever_lived = []
     while state.current_day < days_to_simulate and 0 <= population < 40000:
         women_at_next_iteration = set()
         men_at_next_iteration = set()
@@ -75,11 +75,10 @@ def main():
                     death_roll = random.randint(0, 100000)
                     if death_roll < 3120:
                         human.life_expectancy = 0
+                    all_ever_lived.append(human.baby)
                     if isinstance(human.baby, Woman):
-                        all_ever_lived.append(human.baby)
                         women_at_next_iteration.add(human.baby)
                     else:
-                        all_ever_lived.append(human.baby)
                         men_at_next_iteration.add(human.baby)
                 human.baby = None
                 human.conception = None
@@ -127,12 +126,12 @@ def main():
         f.write(f"\nPeople aged 0-15: {len([h.age for h in everybody if h.age < 15])}")
         f.write(f"\nPeople aged 15-60: {len([h.age for h in everybody if 15 < h.age < 60])}")
         f.write(f"\nPeople aged 60+: {len([h.age for h in everybody if h.age > 60])}")
-        f.write(f"\nNsexual partners/boy: {np.average([len(h.sexual_partners.keys()) for h in men])}")
-        f.write(f"\nNsexual partners/girl: {np.average([len(h.sexual_partners.keys()) for h in women])}")
+        f.write(f"\nNsexual partners/boy: {np.average([len(h.sexual_partners.keys()) for h in men if h.age_cherry_popped is not None])}")
+        f.write(f"\nNsexual partners/girl: {np.average([len(h.sexual_partners.keys()) for h in women if h.age_cherry_popped is not None])}")
         f.write(
             f"\navg. age virginity loss/girl: {np.average([h.age_cherry_popped for h in women if h.age_cherry_popped is not None])}")
         f.write(
-            f"\navg. age virginity loss/boy: {np.average([h.age_cherry_popped for h in women if h.age_cherry_popped is not None])}")
+            f"\navg. age virginity loss/boy: {np.average([h.age_cherry_popped for h in men if h.age_cherry_popped is not None])}")
         f.write(
             f"\ntop 1% age virginity loss/girl: {np.percentile([h.age_cherry_popped for h in women if h.age_cherry_popped is not None], 99)}")
         f.write(
@@ -142,16 +141,21 @@ def main():
         f.write(
             f"\ntop 99% age virginity loss/girl: {np.percentile([h.age_cherry_popped for h in women if h.age_cherry_popped is not None], 1)}")
         f.write(
-            f"\ntop 1% age virginity loss/boy: {np.percentile([h.age_cherry_popped for h in women if h.age_cherry_popped is not None], 99)}")
+            f"\ntop 1% age virginity loss/boy: {np.percentile([h.age_cherry_popped for h in men if h.age_cherry_popped is not None], 99)}")
         f.write(
-            f"\ntop 10% age virginity loss/boy: {np.percentile([h.age_cherry_popped for h in women if h.age_cherry_popped is not None], 90)}")
+            f"\ntop 10% age virginity loss/boy: {np.percentile([h.age_cherry_popped for h in men if h.age_cherry_popped is not None], 90)}")
         f.write(
-            f"\ntop 90% age virginity loss/boy: {np.percentile([h.age_cherry_popped for h in women if h.age_cherry_popped is not None], 10)}")
+            f"\ntop 90% age virginity loss/boy: {np.percentile([h.age_cherry_popped for h in men if h.age_cherry_popped is not None], 10)}")
         f.write(
-            f"\ntop 99% age virginity loss/boy: {np.percentile([h.age_cherry_popped for h in women if h.age_cherry_popped is not None], 1)}")
+            f"\ntop 99% age virginity loss/boy: {np.percentile([h.age_cherry_popped for h in men if h.age_cherry_popped is not None], 1)}")
 
     open("population.txt", "w").write("\n".join([str(h) for h in everybody]))
-    pickle.dump(all_ever_lived, open("population.pkl", "wb"))
+
+    to_package = [
+        h.as_dict() for h in all_ever_lived
+    ]
+    with open("population.pkl", "wb") as universe_file:
+        pickle.dump(to_package, universe_file, pickle.HIGHEST_PROTOCOL)
 
     print("Simulation finished!")
 
@@ -334,6 +338,6 @@ def draw_family_tree(person: [Man, Woman]):
 
 
 if __name__ == '__main__':
-    # main()
-    explore_population()
+    main()
+    # explore_population()
     # draw_family_tree(None)
