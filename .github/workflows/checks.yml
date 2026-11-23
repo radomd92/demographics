@@ -1,0 +1,34 @@
+name: Quality & native engine
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          python-version: ${{ matrix.python }}
+      - run: uv sync --locked --python ${{ matrix.python }}
+      - run: uv run --python ${{ matrix.python }} ruff check .
+      - run: uv run --python ${{ matrix.python }} ruff format --check .
+      - run: uv run --python ${{ matrix.python }} mypy
+      - name: Source-only tests
+        run: uv run --python ${{ matrix.python }} pytest
+      - name: Real UI compilation, native parity, and benchmark
+        env:
+          DEMOGRAPHICS_TEST_NATIVE: "1"
+        run: >-
+          uv run --python ${{ matrix.python }} pytest
+          tests/test_ui.py::test_real_compilation_and_benchmark_in_ui
+      - name: Native-enabled suite
+        run: uv run --python ${{ matrix.python }} pytest

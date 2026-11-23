@@ -1,3 +1,4 @@
+# Historical dependencies only. The maintained app uses pyproject.toml + uv.lock.
 contourpy==1.2.1
 cycler==0.12.1
 fonttools==4.51.0
