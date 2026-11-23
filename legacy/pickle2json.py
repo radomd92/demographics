@@ -1,4 +1,5 @@
 """
+LEGACY ONLY: never load an untrusted pickle file; pickle can execute arbitrary code.
 Pickle2JSON is a simple Python Command Line program for converting Pickle file to JSON file.
 Arguments: Only one (1) argument is expected which is the pickle file.
 Usage: python pickle2json.py myfile.pkl

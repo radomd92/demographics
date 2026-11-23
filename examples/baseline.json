@@ -1,0 +1,17 @@
+{
+  "years": 100,
+  "initial_men": 95,
+  "initial_women": 132,
+  "initial_max_age": 60.0,
+  "life_expectancy": 78.0,
+  "lifespan_stddev": 12.0,
+  "annual_conception_probability": 0.18,
+  "fertility_min_age": 18.0,
+  "fertility_max_age": 45.0,
+  "gestation_days": 270,
+  "maternal_mortality": 0.001,
+  "infant_mortality": 0.01,
+  "step_days": 30,
+  "max_population": 40000,
+  "seed": 42
+}

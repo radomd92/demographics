@@ -1,3 +1,6 @@
+"""Legacy global clock, retained only for the original model."""
+
+
 class SingletonMeta(type):
     _instances = {}
 

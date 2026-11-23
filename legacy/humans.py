@@ -1,3 +1,5 @@
+"""Original individual model; not imported by Demographics Lab."""
+
 import numpy as np
 import math
 import random
